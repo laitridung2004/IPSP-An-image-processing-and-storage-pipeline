@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: traffic-producer
+spec:
+  template:
+    metadata:
+      labels:
+        app: traffic-producer
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: producer
+        image: quaqducc/traffic-producer:v1
+        imagePullPolicy: Always
+        env:
+        - name: KAFKA_BROKER
+          value: "my-kafka:9092"
+        - name: MINIO_ENDPOINT
+          value: "my-minio:9000"
+        - name: MINIO_ACCESS_KEY
+          value: "bigdataproject"
+        - name: MINIO_SECRET_KEY
+          value: "bigdataproject"
+        - name: CAM_MODE
+          value: "dev"

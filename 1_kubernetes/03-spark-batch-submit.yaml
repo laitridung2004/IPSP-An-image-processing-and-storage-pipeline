@@ -1,0 +1,108 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: spark-batch-submit-job
+spec:
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: spark-batch-submit-job
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: spark-submit
+        image: tamnt2409/spark-batch-computing:v1
+        imagePullPolicy: Always
+        env:
+          - name: SPARK_DRIVER_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          # QUAN TRỌNG: Set SPARK_MASTER để code main.py sử dụng cluster
+          - name: SPARK_MASTER
+            value: "spark://spark-batch-master:7077"
+          - name: KAFKA_BROKER
+            value: "my-kafka:9092"
+          - name: TOPIC_NAME
+            value: "traffic_data"
+          - name: MINIO_ENDPOINT
+            value: "my-minio:9000"
+          - name: MINIO_ACCESS_KEY
+            value: "bigdataproject"
+          - name: MINIO_SECRET_KEY
+            value: "bigdataproject"
+          - name: MINIO_BUCKET
+            value: "configs"
+          - name: MONGO_URI
+            value: "mongodb://root:bigdataproject@my-mongodb.default.svc.cluster.local:27017/traffic_db?authSource=admin"
+          - name: DB_NAME
+            value: "traffic_db"
+          - name: SPARK_APP_NAME
+            value: "YOLO_Inference_Batch_Job"
+          - name: IMG_SIZE
+            value: "640"
+        command: ["/opt/spark/bin/spark-submit"]
+        args:
+          - "--master"
+          - "spark://spark-batch-master:7077"
+          - "--deploy-mode"
+          - "client"
+          - "--conf"
+          - "spark.driver.bindAddress=0.0.0.0"
+          - "--conf"
+          - "spark.driver.host=$(SPARK_DRIVER_POD_IP)"
+          - "--conf"
+          - "spark.driver.port=33043"
+          - "--conf"
+          - "spark.blockManager.port=33044"
+          # Executor configuration - phù hợp với 2 workers x 3 cores/3GB
+          - "--conf"
+          - "spark.executor.instances=2"
+          - "--conf"
+          - "spark.executor.memory=2500m"
+          - "--conf"
+          - "spark.executor.cores=3"
+          - "--conf"
+          - "spark.driver.memory=1500m"
+          # Parallelism settings - 6 cores total (2 executors x 3 cores)
+          - "--conf"
+          - "spark.sql.shuffle.partitions=6"
+          - "--conf"
+          - "spark.default.parallelism=6"
+          # Memory and performance tuning
+          - "--conf"
+          - "spark.memory.fraction=0.6"
+          - "--conf"
+          - "spark.network.timeout=600s"
+          - "--conf"
+          - "spark.executor.heartbeatInterval=30s"
+          - "--conf"
+          - "spark.sql.adaptive.enabled=true"
+          - "--conf"
+          - "spark.sql.adaptive.coalescePartitions.enabled=true"
+          - "--packages"
+          - "org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1"
+          - "--py-files"
+          - "/app/util.py"
+          - "/app/main.py"
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "2500Mi"
+            cpu: "1500m"
+        volumeMounts:
+          - mountPath: /dev/shm
+            name: dshm
+          - mountPath: /tmp
+            name: temp-data
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "1Gi"
+        - name: temp-data
+          emptyDir: {}

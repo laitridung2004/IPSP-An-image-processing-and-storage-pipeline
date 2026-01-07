@@ -1,0 +1,64 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: spark-batch-computing
+spec:
+  ttlSecondsAfterFinished: 86400 
+  backoffLimit: 1 
+  template:
+    metadata:
+      labels:
+        app: spark-batch-computing
+    spec:
+      restartPolicy: Never 
+      containers:
+      - name: yolo-inferencer
+        image: tamnt2409/spark-batch-computing:v1 
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "8Gi"      # Tăng từ 1GB -> 8GB
+            cpu: "6000m"       # Tăng từ 0.5 -> 6 cores
+          limits:
+            memory: "12Gi"     # Tăng từ 2GB -> 12GB
+            cpu: "12000m"      # Tăng từ 2 -> 12 cores
+        volumeMounts:
+          - mountPath: /dev/shm
+            name: dshm
+          - mountPath: /tmp
+            name: temp-data
+        env:
+          - name: KAFKA_BROKER
+            value: "my-kafka:9092"
+          - name: TOPIC_NAME
+            value: "traffic_data"                
+          - name: MINIO_ENDPOINT
+            value: "my-minio:9000"
+          - name: MINIO_ACCESS_KEY
+            value: "bigdataproject"
+          - name: MINIO_SECRET_KEY
+            value: "bigdataproject"
+          - name: MINIO_BUCKET
+            value: "configs"
+          - name: SPARK_MASTER
+            value: "local[12]"              # Tăng từ local[2] -> local[12]
+          - name: SPARK_APP_NAME
+            value: "YOLO_Inference_Job"
+          - name: IMG_SIZE
+            value: "640"                     # Tăng từ 640 (có thể tăng lên 1280 nếu cần)
+          - name: MONGO_URI
+            value: "mongodb://root:bigdataproject@my-mongodb.default.svc.cluster.local:27017/traffic_db?authSource=admin"
+          - name: DB_NAME
+            value: "traffic_db"
+          - name: SPARK_DRIVER_MEMORY
+            value: "4g"                      # Tăng từ 800m -> 4g
+          - name: SPARK_EXECUTOR_MEMORY
+            value: "6g"                      # Tăng từ 1g -> 6g
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "2Gi"                 # Tăng từ 512Mi -> 2Gi
+        - name: temp-data
+          emptyDir: 
+            sizeLimit: "4Gi"                 # Thêm limit cho temp storage

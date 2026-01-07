@@ -1,0 +1,71 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: traffic-yolo-train-manual
+spec:
+  ttlSecondsAfterFinished: 86400 
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: traffic-yolo-train-manual
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: yolo-trainer
+        image: anvu1204/yolo-training-batch:v1
+        imagePullPolicy: Always
+
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m" 
+        
+        volumeMounts:
+          - mountPath: /dev/shm
+            name: dshm
+          - mountPath: /tmp
+            name: temp-data
+
+        env:
+          - name: KAFKA_BROKER
+            value: "my-kafka:9092"
+          - name: TOPIC_NAME
+            value: "traffic_data"                
+          - name: MINIO_ENDPOINT
+            value: "my-minio:9000"
+          - name: MINIO_ACCESS_KEY
+            value: "bigdataproject"
+          - name: MINIO_SECRET_KEY
+            value: "bigdataproject"
+          - name: MINIO_BUCKET
+            value: "traffic-models"
+          
+          - name: SPARK_MASTER
+            value: "local[*]"
+          - name: SPARK_APP_NAME
+            value: "YOLO_Train_Job"
+          
+          - name: EPOCHS
+            value: "10"
+          - name: BATCH_SIZE
+            value: "1"
+          - name: IMG_SIZE
+            value: "640"
+          - name: MODEL_SIZE
+            value: "yolov8n.pt" 
+          
+          - name: DATA_DIR
+            value: "/tmp/yolo_training_data"
+          - name: OUTPUT_DIR
+            value: "/tmp/yolo_training_output"
+
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+        - name: temp-data
+          emptyDir: {}

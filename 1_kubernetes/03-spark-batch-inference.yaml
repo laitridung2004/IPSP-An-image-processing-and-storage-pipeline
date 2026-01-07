@@ -1,0 +1,72 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: traffic-yolo-inference-manual
+spec:
+  ttlSecondsAfterFinished: 86400 
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: traffic-yolo-inference-manual
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: yolo-inferencer
+        image: itvc0110/traffic-inference-batch:v1
+        imagePullPolicy: Always
+
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m" 
+        
+        volumeMounts:
+          - mountPath: /dev/shm
+            name: dshm
+          - mountPath: /tmp
+            name: temp-data
+
+        env:
+          - name: KAFKA_BROKER
+            value: "my-kafka:9092"
+          - name: TOPIC_NAME
+            value: "traffic_data"                
+          - name: MINIO_ENDPOINT
+            value: "my-minio:9000"
+          - name: MINIO_ACCESS_KEY
+            value: "bigdataproject"
+          - name: MINIO_SECRET_KEY
+            value: "bigdataproject"
+          - name: MINIO_BUCKET
+            value: "traffic-models"
+          
+          - name: SPARK_MASTER
+            value: "local[*]"
+          - name: SPARK_APP_NAME
+            value: "YOLO_Inference_Job"
+          
+          - name: BATCH_SIZE
+            value: "1"
+          - name: IMG_SIZE
+            value: "640"
+          
+          - name: DATA_DIR
+            value: "/tmp/yolo_inference_data"
+          - name: OUTPUT_DIR
+            value: "/tmp/yolo_inference_output"
+          
+          - name: MONGO_URI
+            value: "mongodb://root:bigdataproject@my-mongodb.default.svc.cluster.local:27017/traffic_db?authSource=admin"
+          - name: DB_NAME
+            value: "traffic_db"
+
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+        - name: temp-data
+          emptyDir: {}

@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic-spark-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traffic-spark-app
+  template:
+    metadata:
+      labels:
+        app: traffic-spark-app
+    spec:
+      containers:
+        - name: spark-processor
+          image: laidung/traffic-spark-app:v1
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+          env:
+            - name: KAFKA_BROKER
+              value: "my-kafka:9092"
+            - name: TOPIC_NAME
+              value: "traffic_data"
+            - name: MONGO_URI
+              value: "mongodb://root:bigdataproject@my-mongodb.default.svc.cluster.local:27017/traffic_db?authSource=admin"
+            - name: MINIO_ENDPOINT
+              value: "my-minio:9000"
+            - name: MINIO_ROOT_USER
+              value: "bigdataproject"
+            - name: MINIO_ROOT_PASSWORD
+              value: "bigdataproject"
+            - name: REDIS_HOST
+              value: "redis-service" 
+            - name: REDIS_PORT
+              value: "6379"
+            - name: SPARK_MASTER
+              value: "local[*]"

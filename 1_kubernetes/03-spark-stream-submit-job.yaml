@@ -1,0 +1,66 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: spark-cluster-app
+spec:
+  template:
+    metadata:
+      labels:
+        app: spark-cluster-app
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: spark-submit
+        image: tamnt2409/traffic-spark-app:v17
+        imagePullPolicy: Always
+        env:
+          - name: SPARK_DRIVER_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KAFKA_BROKER
+            value: "my-kafka:9092"
+          - name: TOPIC_NAME
+            value: "traffic_data"
+          - name: MONGO_URI
+            value: "mongodb://root:bigdataproject@my-mongodb:27017/traffic_db?authSource=admin"
+          - name: MINIO_ENDPOINT
+            value: "my-minio:9000"
+          - name: MINIO_ROOT_USER
+            value: "bigdataproject"
+          - name: MINIO_ROOT_PASSWORD
+            value: "bigdataproject"
+        command: ["/opt/spark/bin/spark-submit"]
+        args:
+          - "--master"
+          - "spark://spark-master:7077"
+          - "--deploy-mode"
+          - "client"
+          - "--conf"
+          - "spark.driver.bindAddress=0.0.0.0"
+          - "--conf"
+          - "spark.driver.host=$(SPARK_DRIVER_POD_IP)"
+          - "--conf"
+          - "spark.driver.port=33043"
+          - "--conf"
+          - "spark.blockManager.port=33044"
+          - "--packages"
+          - "org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1,org.mongodb.spark:mongo-spark-connector_2.12:10.2.1"
+          - "--conf"
+          - "spark.executor.instances=1"
+          - "--conf"
+          - "spark.executor.memory=512m"
+          - "--conf"
+          - "spark.executor.cores=1"
+          - "--conf"
+          - "spark.driver.memory=512m"
+          - "--py-files"
+          - "/app/util.py"
+          - "/app/main.py"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"

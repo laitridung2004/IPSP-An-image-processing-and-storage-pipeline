@@ -1,0 +1,4 @@
+kafka-python==2.3.0
+numpy==2.3.5
+py4j==0.10.9.9
+pyspark==4.0.1

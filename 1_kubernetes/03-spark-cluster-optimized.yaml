@@ -1,0 +1,124 @@
+# ============================================
+# SPARK MASTER FOR BATCH COMPUTING
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-batch-master
+spec:
+  type: ClusterIP
+  ports:
+    - port: 7077
+      targetPort: 7077
+      name: spark
+    - port: 8080
+      targetPort: 8080
+      name: web-ui
+  selector:
+    app: spark-batch-master
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-batch-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-batch-master
+  template:
+    metadata:
+      labels:
+        app: spark-batch-master
+    spec:
+      containers:
+      - name: spark-batch-master
+        image: tamnt2409/spark-batch-computing:v1
+        imagePullPolicy: Always
+        command: ["/opt/spark/bin/spark-class"]
+        args: ["org.apache.spark.deploy.master.Master"]
+        ports:
+        - containerPort: 7077
+          name: spark
+        - containerPort: 8080
+          name: web-ui
+        env:
+        - name: SPARK_MASTER_HOST
+          value: "0.0.0.0"
+        - name: SPARK_MASTER_PORT
+          value: "7077"
+        - name: SPARK_MASTER_WEBUI_PORT
+          value: "8080"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+---
+# ============================================
+# SPARK WORKERS FOR BATCH COMPUTING
+# 2 workers x 3 cores x 3GB RAM
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-batch-worker
+spec:
+  clusterIP: None
+  selector:
+    app: spark-batch-worker
+  ports:
+    - port: 8081
+      name: web-ui
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-batch-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: spark-batch-worker
+  template:
+    metadata:
+      labels:
+        app: spark-batch-worker
+    spec:
+      containers:
+      - name: spark-batch-worker
+        image: tamnt2409/spark-batch-computing:v1
+        imagePullPolicy: Always
+        command: ["/opt/spark/bin/spark-class"]
+        args: ["org.apache.spark.deploy.worker.Worker", "spark://spark-batch-master:7077"]
+        ports:
+        - containerPort: 8081
+          name: web-ui
+        env:
+        - name: SPARK_WORKER_CORES
+          value: "3"
+        - name: SPARK_WORKER_MEMORY
+          value: "3g"
+        - name: SPARK_WORKER_WEBUI_PORT
+          value: "8081"
+        resources:
+          requests:
+            memory: "3Gi"
+            cpu: "3000m"
+          limits:
+            memory: "3500Mi"
+            cpu: "3500m"
+        volumeMounts:
+          - mountPath: /dev/shm
+            name: dshm
+          - mountPath: /tmp
+            name: temp-data
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "1Gi"
+        - name: temp-data
+          emptyDir: {}

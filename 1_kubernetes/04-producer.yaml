@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: producer
+spec:
+  template:
+    metadata:
+      labels:
+        app: producer
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: producer
+        image: tamnt2409/traffic-producer:v10
+        imagePullPolicy: Always
+        env:
+        - name: KAFKA_BROKER
+          value: "my-kafka:9092"
+        - name: MINIO_ENDPOINT
+          value: "my-minio:9000"
+        - name: MINIO_ACCESS_KEY
+          value: "bigdataproject"
+        - name: MINIO_SECRET_KEY
+          value: "bigdataproject"
+        - name: CAM_MODE
+          value: "dev"

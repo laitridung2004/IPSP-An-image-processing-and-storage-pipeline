@@ -1,0 +1,11 @@
+# PyTorch CPU-only (lighter than CUDA version)
+torch
+torchvision
+
+# Core dependencies
+ultralytics
+minio
+Pillow
+PyYAML
+pyspark==3.4.1
+

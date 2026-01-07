@@ -1,0 +1,14 @@
+lmdb_data/
+*.lmdb
+*.mdb
+
+.venv/
+
+__pycache__/
+*.pyc   
+
+*.pt
+*.pth
+*.onnx
+
+command.txt
