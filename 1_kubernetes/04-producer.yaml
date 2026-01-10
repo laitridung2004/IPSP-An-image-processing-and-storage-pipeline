@@ -11,7 +11,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: producer
-        image: laidung/producer:v1
+        image: tamnt2409/producer:v1
         imagePullPolicy: Always
         env:
         - name: KAFKA_BROKER

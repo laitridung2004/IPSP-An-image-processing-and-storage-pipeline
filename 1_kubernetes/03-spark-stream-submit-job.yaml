@@ -11,7 +11,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: spark-submit
-        image: laidung/spark-stream:v1
+        image: tamnt2409/spark-stream:v1
         imagePullPolicy: Always
         env:
           - name: SPARK_DRIVER_POD_IP
@@ -51,16 +51,18 @@ spec:
           - "--conf"
           - "spark.executor.memory=512m"
           - "--conf"
+          - "spark.executor.memoryOverhead=512m"
+          - "--conf"
           - "spark.executor.cores=1"
           - "--conf"
-          - "spark.driver.memory=512m"
+          - "spark.driver.memory=1g"
           - "--py-files"
           - "/app/util.py"
           - "/app/main.py"
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "250m"
-          limits:
             memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
             cpu: "1000m"
