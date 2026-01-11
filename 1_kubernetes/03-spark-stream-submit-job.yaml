@@ -11,7 +11,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: spark-submit
-        image: quaqducc/spark-stream:v1
+        image: laidung/spark-stream:v1
         imagePullPolicy: Always
         env:
           - name: SPARK_DRIVER_POD_IP
