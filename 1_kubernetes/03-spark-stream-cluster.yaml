@@ -77,7 +77,7 @@ kind: Deployment
 metadata:
   name: spark-worker
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: spark-worker
