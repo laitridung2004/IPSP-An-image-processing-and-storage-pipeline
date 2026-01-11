@@ -1,18 +1,25 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: spark-cluster-app
+  name: spark-batch-submit
 spec:
   template:
     metadata:
       labels:
-        app: spark-cluster-app
+        app: spark-batch-submit
     spec:
       restartPolicy: Never
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "512Mi"
+        - name: temp-data
+          emptyDir: {}
       containers:
       - name: spark-submit
-        image: quaqducc/spark-stream:v1
-        imagePullPolicy: Always
+        image: quaqducc/spark-batch-computing:v1
+        imagePullPolicy: IfNotPresent
         env:
           - name: SPARK_DRIVER_POD_IP
             valueFrom:
@@ -22,14 +29,24 @@ spec:
             value: "my-kafka:9092"
           - name: TOPIC_NAME
             value: "traffic_data"
-          - name: MONGO_URI
-            value: "mongodb://root:bigdataproject@my-mongodb:27017/traffic_db?authSource=admin"
           - name: MINIO_ENDPOINT
             value: "my-minio:9000"
-          - name: MINIO_ROOT_USER
+          - name: MINIO_ACCESS_KEY
             value: "bigdataproject"
-          - name: MINIO_ROOT_PASSWORD
+          - name: MINIO_SECRET_KEY
             value: "bigdataproject"
+          - name: MINIO_BUCKET
+            value: "configs"
+          - name: SPARK_MASTER
+            value: "spark://spark-master:7077"
+          - name: SPARK_APP_NAME
+            value: "YOLO_Inference_Job"
+          - name: IMG_SIZE
+            value: "320"
+          - name: MONGO_URI
+            value: "mongodb://root:bigdataproject@my-mongodb.default.svc.cluster.local:27017/traffic_db?authSource=admin"
+          - name: DB_NAME
+            value: "traffic_db"
         command: ["/opt/spark/bin/spark-submit"]
         args:
           - "--master"
@@ -47,11 +64,21 @@ spec:
           - "--packages"
           - "org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1,org.mongodb.spark:mongo-spark-connector_2.12:10.2.1"
           - "--conf"
+          - "spark.executorEnv.MINIO_ENDPOINT=my-minio:9000"
+          - "--conf"
+          - "spark.executorEnv.MINIO_ACCESS_KEY=bigdataproject"
+          - "--conf"
+          - "spark.executorEnv.MINIO_SECRET_KEY=bigdataproject"
+          - "--conf"
+          - "spark.executorEnv.MINIO_BUCKET=configs"
+          - "--conf"
+          - "spark.executorEnv.IMG_SIZE=320"
+          - "--conf"
           - "spark.executor.instances=1"
           - "--conf"
           - "spark.executor.memory=512m"
           - "--conf"
-          - "spark.executor.memoryOverhead=512m"
+          - "spark.executor.memoryOverhead=256m"
           - "--conf"
           - "spark.executor.cores=1"
           - "--conf"
@@ -66,3 +93,9 @@ spec:
           limits:
             memory: "2Gi"
             cpu: "1000m"
+        volumeMounts:
+          - mountPath: /dev/shm
+            name: dshm
+          - mountPath: /tmp
+            name: temp-data
+

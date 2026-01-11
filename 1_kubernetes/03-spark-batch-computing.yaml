@@ -13,8 +13,8 @@ spec:
       restartPolicy: Never 
       containers:
       - name: yolo-inferencer
-        image: itvc0110/spark-batch-computing:v1 
-        imagePullPolicy: Always
+        image: quaqducc/spark-batch-computing:v1 
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             memory: "1000Mi"   

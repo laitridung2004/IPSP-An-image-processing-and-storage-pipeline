@@ -1,6 +1,3 @@
-# ============================================
-# SPARK MASTER
-# ============================================
 apiVersion: v1
 kind: Service
 metadata:
@@ -33,8 +30,8 @@ spec:
     spec:
       containers:
       - name: spark-master
-        image: quaqducc/spark-stream:v1
-        imagePullPolicy: Always
+        image: quaqducc/spark-batch-computing:v1
+        imagePullPolicy: IfNotPresent
         command: ["/opt/spark/bin/spark-class"]
         args: ["org.apache.spark.deploy.master.Master"]
         ports:
@@ -57,9 +54,6 @@ spec:
             memory: "1Gi"
             cpu: "1000m"
 ---
-# ============================================
-# SPARK WORKERS
-# ============================================
 apiVersion: v1
 kind: Service
 metadata:
@@ -86,14 +80,41 @@ spec:
       labels:
         app: spark-worker
     spec:
+      initContainers:
+      - name: init-download-model
+        image: quaqducc/spark-batch-computing:v1
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh","-lc"]
+        args:
+          - >
+            python3 -c "from minio import Minio; import os;
+            c=Minio(os.environ['MINIO_ENDPOINT'], os.environ['MINIO_ACCESS_KEY'], os.environ['MINIO_SECRET_KEY'], secure=False);
+            os.makedirs('/tmp', exist_ok=True);
+            c.fget_object(os.environ.get('MINIO_BUCKET_DATA','traffic-data'), 'models/yolov8_traffic_best.pt', '/tmp/yolov8_traffic_best.pt');
+            print('Model downloaded to /tmp/yolov8_traffic_best.pt')"
+        env:
+        - name: MINIO_ENDPOINT
+          value: "my-minio:9000"
+        - name: MINIO_ACCESS_KEY
+          value: "bigdataproject"
+        - name: MINIO_SECRET_KEY
+          value: "bigdataproject"
+        - name: MINIO_BUCKET_DATA
+          value: "traffic-data"
+        volumeMounts:
+          - mountPath: /tmp
+            name: temp-data
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "512Mi"
+        - name: temp-data
+          emptyDir: {}
       containers:
       - name: spark-worker
-<<<<<<< HEAD
-        image: tamnt2409/spark-stream:v1
-=======
-        image: quaqducc/spark-stream:v1
->>>>>>> 3ced8b5 (update pipeline)
-        imagePullPolicy: Always
+        image: quaqducc/spark-batch-computing:v1
+        imagePullPolicy: IfNotPresent
         command: ["/opt/spark/bin/spark-class"]
         args: ["org.apache.spark.deploy.worker.Worker", "spark://spark-master:7077"]
         ports:
@@ -106,6 +127,16 @@ spec:
           value: "1g"
         - name: SPARK_WORKER_WEBUI_PORT
           value: "8081"
+        - name: MINIO_ENDPOINT
+          value: "my-minio:9000"
+        - name: MINIO_ACCESS_KEY
+          value: "bigdataproject"
+        - name: MINIO_SECRET_KEY
+          value: "bigdataproject"
+        - name: MINIO_BUCKET
+          value: "configs"
+        - name: IMG_SIZE
+          value: "320"
         resources:
           requests:
             memory: "1Gi"
@@ -113,3 +144,9 @@ spec:
           limits:
             memory: "2Gi"
             cpu: "2000m"
+        volumeMounts:
+          - mountPath: /dev/shm
+            name: dshm
+          - mountPath: /tmp
+            name: temp-data
+
